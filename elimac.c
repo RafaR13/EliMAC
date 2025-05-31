@@ -26,7 +26,7 @@ void elimac(const uint8_t *key1, const uint8_t *key2, const uint8_t *message, si
         exit(1);
     }
 
-    // Key schedules
+    // Key schedules (basically generates round keys for AES)
     uint8_t round_keys_7[KEY_SIZE * 8], round_keys_4[KEY_SIZE * 5], round_keys_10[KEY_SIZE * 11];
     aes_key_schedule(key1, round_keys_7, 7);
     aes_key_schedule((uint8_t *)"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00", round_keys_4, 4);
