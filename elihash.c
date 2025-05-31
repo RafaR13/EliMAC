@@ -1,6 +1,7 @@
 #include "elihash.h"
 #include <string.h>
 
+// 7-round AES-128 (TODO: maybe try different variations ?)
 void hash_h(const uint8_t *key, uint32_t counter, uint8_t *output,
             const uint8_t *round_keys, const uint8_t *subkeys, int precompute)
 {
@@ -16,6 +17,7 @@ void hash_h(const uint8_t *key, uint32_t counter, uint8_t *output,
     }
 }
 
+// 4-round AES-128 (TODO: maybe try different variations ?)
 void hash_i(const uint8_t *h_output, const uint8_t *message_block, uint8_t *output,
             const uint8_t *round_keys)
 {

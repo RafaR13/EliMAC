@@ -45,16 +45,6 @@ void elimac(const uint8_t *key1, const uint8_t *key2, const uint8_t *message, si
     // process blocks 1 to l-1
     elihash(state, key1, num_blocks, round_keys_7, subkeys, precompute, padded, round_keys_4);
 
-    /*// Process blocks 1 to l-1
-    for (size_t i = 0; i < num_blocks - 1; i++) {
-        uint8_t h_output[BLOCK_SIZE], i_output[BLOCK_SIZE];
-        hash_h(key1, i + 1, h_output, round_keys_7, subkeys, precompute);
-        hash_i(h_output, padded + i * BLOCK_SIZE, i_output, round_keys_4);
-        for (int j = 0; j < BLOCK_SIZE; j++) {
-            state[j] ^= i_output[j];
-        }
-    }*/
-
     // Last block: S = S XOR M_l
     for (int j = 0; j < BLOCK_SIZE; j++)
     {
@@ -62,6 +52,7 @@ void elimac(const uint8_t *key1, const uint8_t *key2, const uint8_t *message, si
     }
 
     // Finalize: T = E_K2(S)
+    // 10-round AES-128
     aes_encrypt(state, round_keys_10, tag, 10);
 
     // Truncate tag
