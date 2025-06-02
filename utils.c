@@ -102,3 +102,20 @@ void pad_message(const uint8_t *message, size_t len, uint8_t **padded, size_t *p
         memset((*padded) + len + 1, 0, padding_len - 1);
     }
 }
+
+void print_tag(FILE *fp, const uint8_t *tag, int t)
+{
+    for (int i = 0; i < t / 8; i++)
+    {
+        fprintf(fp, "%02x", tag[i]);
+    }
+    fprintf(fp, "\n");
+}
+
+void generate_random_message(uint8_t *message, size_t len)
+{
+    for (size_t i = 0; i < len; i++)
+    {
+        message[i] = (uint8_t)(rand() & 0xFF);
+    }
+}
