@@ -39,13 +39,13 @@ int main()
     uint8_t key2[KEY_SIZE] = {0x3c, 0x4f, 0xcf, 0x09, 0x88, 0x15, 0xf7, 0xab,
                               0xa6, 0xd2, 0xae, 0x28, 0x16, 0x15, 0x7e, 0x2b};
 
-    // Message lengths to test
-    size_t lengths[] = {32, 1024, 100 * 1024};
-    int num_lengths = 3;
+    // Message lengths to test (bytes)
+    size_t lengths[] = {16, 128, 1024, 10000, 100000};
+    int num_lengths = 5;
 
     // Tag lengths to test
-    int tag_bits[] = {128, 64, 32};
-    int num_tags = 3;
+    int tag_bits[] = {128, 96, 64, 32};
+    int num_tags = 4;
 
     uint8_t tag[BLOCK_SIZE];
 
