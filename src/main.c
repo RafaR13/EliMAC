@@ -1,4 +1,4 @@
-#include "main.h"
+#include "headers/main.h"
 
 double test_elimac(FILE *fp, const uint8_t *key1, const uint8_t *key2, const uint8_t *message, size_t len,
                    int tag_bits, int precompute, size_t max_blocks, uint8_t *tag)

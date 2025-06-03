@@ -1,4 +1,4 @@
-#include "elihash.h"
+#include "headers/elihash.h"
 #include <string.h>
 
 // 7-round AES-128 (TODO: maybe try different variations ?)

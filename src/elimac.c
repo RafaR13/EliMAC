@@ -1,6 +1,6 @@
-#include "elimac.h"
-#include "elihash.h"
-#include "utils.h"
+#include "headers/elimac.h"
+#include "headers/elihash.h"
+#include "headers/utils.h"
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>

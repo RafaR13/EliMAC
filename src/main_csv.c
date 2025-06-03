@@ -1,10 +1,10 @@
-#include "elimac.h"
+#include "headers/elimac.h"
+#include "headers/utils.h"
+
 #include <stdio.h>
 #include <string.h>
 #include <time.h>
 #include <stdlib.h>
-
-#include "utils.h"
 
 double test_elimac_csv(FILE *output_file, const uint8_t *key1, const uint8_t *key2, const uint8_t *message, size_t message_length,
                        int tag_bits, int precompute, size_t max_blocks, uint8_t *tag, size_t msg_len)
