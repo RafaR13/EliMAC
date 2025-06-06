@@ -1,14 +1,9 @@
 #include "headers/elimac.h"
-#include "headers/elihash.h"
-#include "headers/utils.h"
-#include <stdlib.h>
-#include <string.h>
-#include <stdio.h>
 
 void elimac(const uint8_t *key1, const uint8_t *key2, const uint8_t *message, size_t len,
-            uint8_t *tag, int t, int precompute, size_t max_blocks)
+            uint8_t *tag, int t, int precompute, size_t max_blocks, int parallel)
 {
-    if (t > 128)
+    if (t > 128 || t < 0)
     {
         fprintf(stderr, "Tag length must be <= 128 bits\n");
         exit(1);
@@ -29,13 +24,20 @@ void elimac(const uint8_t *key1, const uint8_t *key2, const uint8_t *message, si
     // Key schedules (basically generates round keys for AES)
     uint8_t round_keys_7[KEY_SIZE * 8], round_keys_4[KEY_SIZE * 5], round_keys_10[KEY_SIZE * 11];
     aes_key_schedule(key1, round_keys_7, 7);
-    aes_key_schedule((uint8_t *)"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00", round_keys_4, 4);
+    aes_key_schedule(key1, round_keys_4, 4);
     aes_key_schedule(key2, round_keys_10, 10);
 
     // Precompute subkeys
-    uint8_t *subkeys = precompute ? malloc(max_blocks * BLOCK_SIZE) : NULL;
-    if (precompute)
+    uint8_t *subkeys = NULL;
+    if (precompute && max_blocks > 0)
     {
+        subkeys = malloc(max_blocks * BLOCK_SIZE);
+        if (!subkeys)
+        {
+            free(padded);
+            fprintf(stderr, "Memory allocation failed\n");
+            exit(1);
+        }
         precompute_subkeys(key1, subkeys, max_blocks, round_keys_7);
     }
 
@@ -43,7 +45,11 @@ void elimac(const uint8_t *key1, const uint8_t *key2, const uint8_t *message, si
     uint8_t state[BLOCK_SIZE] = {0};
 
     // process blocks 1 to l-1
-    elihash(state, key1, num_blocks, round_keys_7, subkeys, precompute, padded, round_keys_4);
+    elihash(state, key1, num_blocks, round_keys_7, subkeys, precompute, padded, round_keys_4, parallel);
+
+    // #########################################
+    // TODO: CHECK BELOW IF ALGORITHM IS CORRECT
+    // #########################################
 
     // Last block: S = S XOR M_l
     for (int j = 0; j < BLOCK_SIZE; j++)

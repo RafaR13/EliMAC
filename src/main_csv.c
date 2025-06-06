@@ -7,14 +7,14 @@
 #include <stdlib.h>
 
 double test_elimac_csv(FILE *output_file, const uint8_t *key1, const uint8_t *key2, const uint8_t *message, size_t message_length,
-                       int tag_bits, int precompute, size_t max_blocks, uint8_t *tag, size_t msg_len)
+                       int tag_bits, int precompute, size_t max_blocks, uint8_t *tag, size_t msg_len, int parallel)
 {
     const int iterations = 100;
     clock_t start_time = clock();
 
     for (int i = 0; i < iterations; i++)
     {
-        elimac(key1, key2, message, message_length, tag, tag_bits, precompute, max_blocks);
+        elimac(key1, key2, message, message_length, tag, tag_bits, precompute, max_blocks, parallel);
     }
 
     clock_t end_time = clock();

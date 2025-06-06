@@ -13,6 +13,16 @@ To compile and generate two executables (.txt output and .csv output)
 make
 ```
 
+To run the full test suite
+```bash
+./elimac_text --test [--parallel]
+```
+
+To run a specific message (with options)
+```bash
+./elimac_text --run [--message "My custom message"] [--random-keys] [--precompute] [--parallel] [--tag-bits 64]
+```
+
 To compile, run and output to .txt
 ```bash
 make run_text

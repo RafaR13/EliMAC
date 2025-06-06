@@ -9,9 +9,9 @@ TEXT_TARGET = elimac_text
 TEXT_MAIN = $(SRC_DIR)/main.c
 TEXT_OBJECTS = $(TEXT_MAIN:.c=.o) $(OBJECTS)
 
-CSV_TARGET = elimac_csv
-CSV_MAIN = $(SRC_DIR)/main_csv.c
-CSV_OBJECTS = $(CSV_MAIN:.c=.o) $(OBJECTS)
+#CSV_TARGET = elimac_csv
+#CSV_MAIN = $(SRC_DIR)/main_csv.c
+#CSV_OBJECTS = $(CSV_MAIN:.c=.o) $(OBJECTS)
 
 all: $(TEXT_TARGET) $(CSV_TARGET)
 
@@ -26,7 +26,7 @@ $(SRC_DIR)/%.o: $(SRC_DIR)/%.c
 
 run_text: $(TEXT_TARGET)
 	@mkdir -p out
-	./$(TEXT_TARGET)
+	./$(TEXT_TARGET) --test
 
 run_csv: $(CSV_TARGET)
 	@mkdir -p out
@@ -34,7 +34,7 @@ run_csv: $(CSV_TARGET)
 
 run_all: $(TEXT_TARGET) $(CSV_TARGET)
 	@mkdir -p out
-	./$(TEXT_TARGET)
+	./$(TEXT_TARGET) --test
 	./$(CSV_TARGET)
 
 clean:
