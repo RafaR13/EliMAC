@@ -1,5 +1,6 @@
 CC = gcc
-CFLAGS = -O3 -maes -msse4.2 -Wall -Iheaders
+CFLAGS = -O3 -maes -msse4.2 -Wall -Iheaders -fopenmp
+LDFLAGS = -fopenmp
 SRC_DIR = src
 COMMON_SOURCES = $(SRC_DIR)/elimac.c $(SRC_DIR)/elihash.c $(SRC_DIR)/utils.c
 OBJECTS = $(COMMON_SOURCES:.c=.o)
@@ -15,10 +16,10 @@ CSV_OBJECTS = $(CSV_MAIN:.c=.o) $(OBJECTS)
 all: $(TEXT_TARGET) $(CSV_TARGET)
 
 $(TEXT_TARGET): $(TEXT_OBJECTS)
-	$(CC) $(TEXT_OBJECTS) -o $@
+	$(CC) $(TEXT_OBJECTS) -o $@ $(LDFLAGS)
 
 $(CSV_TARGET): $(CSV_OBJECTS)
-	$(CC) $(CSV_OBJECTS) -o $@
+	$(CC) $(CSV_OBJECTS) -o $@ $(LDFLAGS)
 
 $(SRC_DIR)/%.o: $(SRC_DIR)/%.c
 	$(CC) $(CFLAGS) -c $< -o $@

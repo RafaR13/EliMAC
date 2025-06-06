@@ -1,18 +1,20 @@
 #include "headers/main.h"
 
+#define ITERATIONS 100
+#define RANDOM_KEYS 1
+
 double test_elimac(FILE *fp, const uint8_t *key1, const uint8_t *key2, const uint8_t *message, size_t len,
                    int tag_bits, int precompute, size_t max_blocks, uint8_t *tag)
 {
-    const int iterations = 100;
     clock_t start = clock();
 
-    for (int i = 0; i < iterations; i++)
+    for (int i = 0; i < ITERATIONS; i++)
     {
         elimac(key1, key2, message, len, tag, tag_bits, precompute, max_blocks);
     }
 
     clock_t end = clock();
-    double time_us = ((double)(end - start) * 1000000.0) / (CLOCKS_PER_SEC * iterations);
+    double time_us = ((double)(end - start) * 1000000.0) / (CLOCKS_PER_SEC * ITERATIONS);
 
     fprintf(fp, "Tag: ");
     print_tag(fp, tag, tag_bits);
@@ -40,8 +42,8 @@ int main()
                               0xa6, 0xd2, 0xae, 0x28, 0x16, 0x15, 0x7e, 0x2b};
 
     // Message lengths to test (bytes)
-    size_t lengths[] = {16, 128, 1024, 10000, 100000};
-    int num_lengths = 5;
+    size_t lengths[] = {16, 128, 1024, 10000, 100000, 1000000};
+    int num_lengths = 6;
 
     // Tag lengths to test
     int tag_bits[] = {128, 96, 64, 32};
@@ -72,6 +74,24 @@ int main()
             double time_precomp = test_elimac(fp, key1, key2, message, len, tag_len, 1, max_blocks, tag);
             fprintf(fp, "Avg time: %.2f us\n", time_precomp);
             fprintf(fp, "Speedup: %.2fx\n", time_no_precomp / time_precomp);
+
+#if RANDOM_KEYS
+            // Random keys
+            uint8_t random_key1[KEY_SIZE], random_key2[KEY_SIZE];
+            generate_random_message(random_key1, KEY_SIZE);
+            generate_random_message(random_key2, KEY_SIZE);
+
+            // Test with random keys, no precomputation
+            fprintf(fp, "\nRandom keys, no precomputation, %d-bit tag:\n", tag_len);
+            time_no_precomp = test_elimac(fp, random_key1, random_key2, message, len, tag_len, 0, 0, tag);
+            fprintf(fp, "Avg time: %.2f us\n", time_no_precomp);
+
+            // Test with random keys, precomputation
+            fprintf(fp, "\nRandom keys, precomputation (%zu blocks), %d-bit tag:\n", max_blocks, tag_len);
+            time_precomp = test_elimac(fp, random_key1, random_key2, message, len, tag_len, 1, max_blocks, tag);
+            fprintf(fp, "Avg time: %.2f us\n", time_precomp);
+            fprintf(fp, "Speedup: %.2fx\n", time_no_precomp / time_precomp);
+#endif
         }
 
         free(message);
