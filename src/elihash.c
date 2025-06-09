@@ -31,9 +31,6 @@ void hash_i(const uint8_t *h_output, const uint8_t *message_block, uint8_t *outp
 void elihash(uint8_t *state, const uint8_t *key1, size_t num_blocks, uint8_t *round_keys_7,
              uint8_t *subkeys, int precompute, uint8_t *padded, uint8_t *round_keys_4, int parallel)
 {
-    // initialize state to zero
-    memset(state, 0, BLOCK_SIZE);
-
     if (parallel)
     {
 #ifdef _OPENMP
@@ -57,6 +54,17 @@ void elihash(uint8_t *state, const uint8_t *key1, size_t num_blocks, uint8_t *ro
                 {
                     state[j] ^= local_state[j];
                 }
+            }
+        }
+#else
+        for (size_t i = 0; i < num_blocks - 1; i++)
+        {
+            uint8_t h_output[BLOCK_SIZE], i_output[BLOCK_SIZE];
+            hash_h(key1, i + 1, h_output, round_keys_7, subkeys, precompute);
+            hash_i(h_output, padded + i * BLOCK_SIZE, i_output, round_keys_4);
+            for (int j = 0; j < BLOCK_SIZE; j++)
+            {
+                state[j] ^= i_output[j];
             }
         }
 #endif

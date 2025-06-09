@@ -39,8 +39,18 @@ static const uint8_t sbox[256] = {
     0x8c, 0xa1, 0x89, 0x0d, 0xbf, 0xe6, 0x42, 0x68,
     0x41, 0x99, 0x2d, 0x0f, 0xb0, 0x54, 0xbb, 0x16};
 
-void aes_key_schedule(const uint8_t *key, uint8_t *round_keys, int rounds)
+int aes_key_schedule(const uint8_t *key, uint8_t *round_keys, int rounds)
 {
+    if (rounds < 4 || rounds > 10)
+    {
+        fprintf(stderr, "Rounds must be between 4 and 10\n");
+        return -1;
+    }
+    if (!key || !round_keys)
+    {
+        fprintf(stderr, "Null pointer in key schedule\n");
+        return -1;
+    }
     memcpy(round_keys, key, 16);
     uint8_t temp[4];
     for (int i = 4; i < 4 * (rounds + 1); i++)
@@ -59,10 +69,16 @@ void aes_key_schedule(const uint8_t *key, uint8_t *round_keys, int rounds)
             round_keys[i * 4 + j] = round_keys[(i - 4) * 4 + j] ^ temp[j];
         }
     }
+    return 0;
 }
 
 void aes_encrypt(const uint8_t *input, const uint8_t *round_keys, uint8_t *output, int rounds)
 {
+    if (!input || !round_keys || !output)
+    {
+        fprintf(stderr, "Null pointer in AES encrypt\n");
+        return;
+    }
     __m128i state = _mm_loadu_si128((__m128i *)input);
     state = _mm_xor_si128(state, _mm_loadu_si128((__m128i *)round_keys));
     for (int i = 1; i < rounds; i++)
@@ -73,12 +89,17 @@ void aes_encrypt(const uint8_t *input, const uint8_t *round_keys, uint8_t *outpu
     _mm_storeu_si128((__m128i *)output, state);
 }
 
-void encode_counter(uint32_t counter, uint8_t *output)
+int encode_counter(uint32_t counter, uint8_t *output)
 {
     if (counter < 1 || counter > MAX_BLOCKS)
     {
-        fprintf(stderr, "Counter out of range\n");
-        exit(1);
+        fprintf(stderr, "Counter out of range [1, 2^32]\n");
+        return -1;
+    }
+    if (!output)
+    {
+        fprintf(stderr, "Null output in encode_counter\n");
+        return -1;
     }
     uint8_t counter_bytes[4] = {
         (counter >> 24) & 0xFF, (counter >> 16) & 0xFF, (counter >> 8) & 0xFF, counter & 0xFF};
@@ -86,25 +107,34 @@ void encode_counter(uint32_t counter, uint8_t *output)
     {
         memcpy(output + i * 4, counter_bytes, 4);
     }
+    return 1;
 }
 
-void pad_message(const uint8_t *message, size_t len, uint8_t **padded, size_t *padded_len)
+int pad_message(const uint8_t *message, size_t len, uint8_t **padded, size_t *padded_len)
 {
-    size_t padding_len = BLOCK_SIZE - (len % BLOCK_SIZE);
-    if (padding_len == BLOCK_SIZE)
-        padding_len = 0;
-    *padded_len = len + padding_len;
-    *padded = malloc(*padded_len);
-    memcpy(*padded, message, len);
-    if (padding_len > 0)
+    if (!message || !padded || !padded_len)
     {
-        (*padded)[len] = 0x80;
-        memset((*padded) + len + 1, 0, padding_len - 1);
+        fprintf(stderr, "Null pointer in pad_message\n");
+        return -1;
     }
+    size_t remainder = len % BLOCK_SIZE;
+    *padded_len = len + (remainder == 0 ? BLOCK_SIZE : BLOCK_SIZE - remainder);
+    *padded = malloc(*padded_len);
+    if (!*padded)
+    {
+        fprintf(stderr, "Memory allocation failed\n");
+        return -1;
+    }
+    memcpy(*padded, message, len);
+    (*padded)[len] = 0x80;
+    memset((*padded) + len + 1, 0, *padded_len - len - 1);
+    return 0;
 }
 
 void print_tag(FILE *fp, const uint8_t *tag, int t)
 {
+    if (!fp || !tag)
+        return;
     for (int i = 0; i < t / 8; i++)
     {
         fprintf(fp, "%02x", tag[i]);
@@ -114,6 +144,8 @@ void print_tag(FILE *fp, const uint8_t *tag, int t)
 
 void generate_random_message(uint8_t *message, size_t len)
 {
+    if (!message || len == 0)
+        return;
     for (size_t i = 0; i < len; i++)
     {
         message[i] = (uint8_t)(rand() & 0xFF);

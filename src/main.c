@@ -4,10 +4,16 @@ double test_elimac(FILE *fp, const uint8_t *key1, const uint8_t *key2, const uin
                    int tag_bits, int precompute, size_t max_blocks, uint8_t *tag, int verbose, int parallel)
 {
     clock_t start = clock();
+    int ret;
 
     for (int i = 0; i < ITERATIONS; i++)
     {
-        elimac(key1, key2, message, len, tag, tag_bits, precompute, max_blocks, parallel);
+        ret = elimac(key1, key2, message, len, tag, tag_bits, precompute, max_blocks, parallel);
+        if (ret != 0)
+        {
+            fprintf(stderr, "EliMAC failed in iteration %d\n", i);
+            return -1.0;
+        }
     }
 
     clock_t end = clock();
@@ -35,7 +41,7 @@ void run_test_suite(FILE *fp, int parallel)
                                     0xab, 0xf7, 0x15, 0x88, 0x09, 0xcf, 0x4f, 0x3c};
     uint8_t fixed_key2[KEY_SIZE] = {0x3c, 0x4f, 0xcf, 0x09, 0x88, 0x15, 0xf7, 0xab,
                                     0xa6, 0xd2, 0xae, 0x28, 0x16, 0x15, 0x7e, 0x2b};
-    size_t lengths[] = {16, 128, 1024, 10000, 100000, 1000000};
+    uint32_t lengths[] = {16, 128, 1024, 10000, 100000, 1000000};
     int num_lengths = 6;
     int tag_bits[] = {128, 96, 64, 32};
     int num_tags = 4;
@@ -43,12 +49,17 @@ void run_test_suite(FILE *fp, int parallel)
 
     for (int l = 0; l < num_lengths; l++)
     {
-        size_t len = lengths[l];
+        uint32_t len = lengths[l];
         uint8_t *message = malloc(len);
+        if (!message)
+        {
+            fprintf(stderr, "Memory allocation failed for message\n");
+            return;
+        }
         generate_random_message(message, len);
-        size_t max_blocks = (len + BLOCK_SIZE - 1) / BLOCK_SIZE;
+        uint32_t max_blocks = (len + BLOCK_SIZE - 1) / BLOCK_SIZE;
 
-        fprintf(fp, "\nTesting message length: %zu bytes (%zu blocks), Parallel: %s\n",
+        fprintf(fp, "\nTesting message length: %u bytes (%u blocks), Parallel: %s\n",
                 len, max_blocks, parallel ? "Yes" : "No");
 
         for (int t = 0; t < num_tags; t++)
@@ -57,10 +68,20 @@ void run_test_suite(FILE *fp, int parallel)
 
             fprintf(fp, "\nFixed keys, no precomputation, %d-bit tag:\n", tag_len);
             double time_no_precomp = test_elimac(fp, fixed_key1, fixed_key2, message, len, tag_len, 0, 0, tag, 0, parallel);
+            if (time_no_precomp < 0)
+            {
+                free(message);
+                return;
+            }
             fprintf(fp, "Avg time: %.2f us\n", time_no_precomp);
 
-            fprintf(fp, "\nFixed keys, precomputation (%zu blocks), %d-bit tag:\n", max_blocks, tag_len);
+            fprintf(fp, "\nFixed keys, precomputation (%u blocks), %d-bit tag:\n", max_blocks, tag_len);
             double time_precomp = test_elimac(fp, fixed_key1, fixed_key2, message, len, tag_len, 1, max_blocks, tag, 0, parallel);
+            if (time_precomp < 0)
+            {
+                free(message);
+                return;
+            }
             fprintf(fp, "Avg time: %.2f us\n", time_precomp);
             fprintf(fp, "Speedup: %.2fx\n", time_no_precomp / time_precomp);
 
@@ -70,10 +91,20 @@ void run_test_suite(FILE *fp, int parallel)
 
             fprintf(fp, "\nRandom keys, no precomputation, %d-bit tag:\n", tag_len);
             time_no_precomp = test_elimac(fp, random_key1, random_key2, message, len, tag_len, 0, 0, tag, 0, parallel);
+            if (time_no_precomp < 0)
+            {
+                free(message);
+                return;
+            }
             fprintf(fp, "Avg time: %.2f us\n", time_no_precomp);
 
-            fprintf(fp, "\nRandom keys, precomputation (%zu blocks), %d-bit tag:\n", max_blocks, tag_len);
+            fprintf(fp, "\nRandom keys, precomputation (%u blocks), %d-bit tag:\n", max_blocks, tag_len);
             time_precomp = test_elimac(fp, random_key1, random_key2, message, len, tag_len, 1, max_blocks, tag, 0, parallel);
+            if (time_precomp < 0)
+            {
+                free(message);
+                return;
+            }
             fprintf(fp, "Avg time: %.2f us\n", time_precomp);
             fprintf(fp, "Speedup: %.2fx\n", time_no_precomp / time_precomp);
         }
@@ -95,15 +126,20 @@ void run_single_message(FILE *fp, const char *message, int random_keys, int prec
         generate_random_message(key2, KEY_SIZE);
     }
 
-    size_t len = strlen(message);
-    size_t max_blocks = (len + BLOCK_SIZE - 1) / BLOCK_SIZE;
+    uint32_t len = (uint32_t)strlen(message);
+    uint32_t max_blocks = (len + BLOCK_SIZE - 1) / BLOCK_SIZE;
     uint8_t tag[BLOCK_SIZE];
 
-    fprintf(fp, "\nRunning EliMAC on message: \"%s\" (%zu bytes, %zu blocks)\n", message, len, max_blocks);
+    fprintf(fp, "\nRunning EliMAC on message: \"%s\" (%u bytes, %u blocks)\n", message, len, max_blocks);
     fprintf(fp, "Random keys: %s, Precomputation: %s, Tag size: %d bits, Parallel: %s\n",
             random_keys ? "Yes" : "No", precompute ? "Yes" : "No", tag_bits, parallel ? "Yes" : "No");
     printf("Tag: ");
     double time_us = test_elimac(fp, key1, key2, (uint8_t *)message, len, tag_bits, precompute, max_blocks, tag, 1, parallel);
+    if (time_us < 0)
+    {
+        fprintf(stderr, "EliMAC failed for single message\n");
+        return;
+    }
     print_tag(stdout, tag, tag_bits);
     printf("Time: %.2f us\n", time_us);
 }

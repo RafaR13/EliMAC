@@ -1,12 +1,12 @@
 #include "headers/elimac.h"
 
-void elimac(const uint8_t *key1, const uint8_t *key2, const uint8_t *message, size_t len,
-            uint8_t *tag, int t, int precompute, size_t max_blocks, int parallel)
+int elimac(const uint8_t *key1, const uint8_t *key2, const uint8_t *message, size_t len,
+           uint8_t *tag, int t, int precompute, size_t max_blocks, int parallel)
 {
     if (t > 128 || t < 0)
     {
         fprintf(stderr, "Tag length must be <= 128 bits\n");
-        exit(1);
+        return -1;
     }
 
     // Pad message
@@ -18,7 +18,7 @@ void elimac(const uint8_t *key1, const uint8_t *key2, const uint8_t *message, si
     {
         free(padded);
         fprintf(stderr, "Message too long\n");
-        exit(1);
+        return -1;
     }
 
     // Key schedules (basically generates round keys for AES)
@@ -36,7 +36,7 @@ void elimac(const uint8_t *key1, const uint8_t *key2, const uint8_t *message, si
         {
             free(padded);
             fprintf(stderr, "Memory allocation failed\n");
-            exit(1);
+            return -1;
         }
         precompute_subkeys(key1, subkeys, max_blocks, round_keys_7);
     }
@@ -47,27 +47,25 @@ void elimac(const uint8_t *key1, const uint8_t *key2, const uint8_t *message, si
     // process blocks 1 to l-1
     elihash(state, key1, num_blocks, round_keys_7, subkeys, precompute, padded, round_keys_4, parallel);
 
-    // #########################################
-    // TODO: CHECK BELOW IF ALGORITHM IS CORRECT
-    // #########################################
-
     // Last block: S = S XOR M_l
-    for (int j = 0; j < BLOCK_SIZE; j++)
+    if (num_blocks > 0)
     {
-        state[j] ^= padded[(num_blocks - 1) * BLOCK_SIZE + j];
+        for (int j = 0; j < BLOCK_SIZE; j++)
+        {
+            state[j] ^= padded[(num_blocks - 1) * BLOCK_SIZE + j];
+        }
     }
 
-    // Finalize: T = E_K2(S)
+    // Finally: T = E_K2(S)
     // 10-round AES-128
-    aes_encrypt(state, round_keys_10, tag, 10);
+    uint8_t final[BLOCK_SIZE];
+    aes_encrypt(state, round_keys_10, final, 10);
 
-    // Truncate tag
-    if (t < 128)
-    {
-        memset(tag + (t / 8), 0, BLOCK_SIZE - (t / 8));
-    }
+    // copy tag (and truncate if necessary)
+    memcpy(tag, final, t / 8);
 
     free(padded);
     if (subkeys)
         free(subkeys);
+    return 0;
 }
