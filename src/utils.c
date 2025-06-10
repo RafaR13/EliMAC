@@ -131,7 +131,7 @@ int pad_message(const uint8_t *message, size_t len, uint8_t **padded, size_t *pa
     return 0;
 }
 
-void print_tag(FILE *fp, const uint8_t *tag, int t)
+void print_tag(FILE *fp, const uint8_t *tag, int t, int isOutput)
 {
     if (!fp || !tag)
         return;
@@ -139,7 +139,8 @@ void print_tag(FILE *fp, const uint8_t *tag, int t)
     {
         fprintf(fp, "%02x", tag[i]);
     }
-    fprintf(fp, "\n");
+    if (isOutput)
+        fprintf(fp, "\n");
 }
 
 void generate_random_message(uint8_t *message, size_t len)

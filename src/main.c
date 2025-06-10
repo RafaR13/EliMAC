@@ -22,13 +22,13 @@ double test_elimac(FILE *fp, const uint8_t *key1, const uint8_t *key2, const uin
     if (verbose)
     {
         fprintf(fp, "Tag: ");
-        print_tag(fp, tag, tag_bits);
+        print_tag(fp, tag, tag_bits, 0);
         fprintf(fp, "Time: %.2f us\n", time_us);
     }
     else
     {
         fprintf(fp, "Tag: ");
-        print_tag(fp, tag, tag_bits);
+        print_tag(fp, tag, tag_bits, 0);
     }
 
     return time_us;
@@ -140,7 +140,7 @@ void run_single_message(FILE *fp, const char *message, int random_keys, int prec
         fprintf(stderr, "EliMAC failed for single message\n");
         return;
     }
-    print_tag(stdout, tag, tag_bits);
+    print_tag(stdout, tag, tag_bits, 1);
     printf("Time: %.2f us\n", time_us);
 }
 

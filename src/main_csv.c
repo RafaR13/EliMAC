@@ -7,7 +7,7 @@
 #include <stdlib.h>
 
 double test_elimac_csv(FILE *output_file, const uint8_t *key1, const uint8_t *key2, const uint8_t *message, uint32_t message_length,
-                       int tag_bits, int precompute, uint32_t max_blocks, uint8_t *tag, uint32_t msg_len, int parallel)
+                       int tag_bits, int precompute, uint32_t max_blocks, uint8_t *tag, uint32_t msg_len, int parallel, int random_keys)
 {
     const int iterations = 1000; // Match main.c ITERATIONS
     clock_t start_time = clock();
@@ -26,9 +26,9 @@ double test_elimac_csv(FILE *output_file, const uint8_t *key1, const uint8_t *ke
     clock_t end_time = clock();
     double time_us = ((double)(end_time - start_time) * 1000000.0) / (CLOCKS_PER_SEC * iterations);
 
-    fprintf(output_file, "%u,%d,%d,", msg_len, tag_bits, precompute);
-    print_tag(output_file, tag, tag_bits);
-    fprintf(output_file, ",%.2f\n", time_us);
+    fprintf(output_file, "%u;%d;%d;%d;%d;", msg_len, tag_bits, precompute, parallel, random_keys);
+    print_tag(output_file, tag, tag_bits, 0);
+    fprintf(output_file, ";%.2f\n", time_us);
 
     return time_us;
 }
@@ -63,14 +63,14 @@ void run_test_suite_csv(FILE *fp, int parallel)
             int tag_len = tag_bits[t];
 
             // Fixed keys, no precomputation
-            if (test_elimac_csv(fp, fixed_key1, fixed_key2, message, len, tag_len, 0, 0, tag, len, parallel) < 0)
+            if (test_elimac_csv(fp, fixed_key1, fixed_key2, message, len, tag_len, 0, 0, tag, len, parallel, 0) < 0)
             {
                 free(message);
                 return;
             }
 
             // Fixed keys, precomputation
-            if (test_elimac_csv(fp, fixed_key1, fixed_key2, message, len, tag_len, 1, max_blocks, tag, len, parallel) < 0)
+            if (test_elimac_csv(fp, fixed_key1, fixed_key2, message, len, tag_len, 1, max_blocks, tag, len, parallel, 0) < 0)
             {
                 free(message);
                 return;
@@ -82,14 +82,14 @@ void run_test_suite_csv(FILE *fp, int parallel)
             generate_random_message(random_key2, KEY_SIZE);
 
             // Random keys, no precomputation
-            if (test_elimac_csv(fp, random_key1, random_key2, message, len, tag_len, 0, 0, tag, len, parallel) < 0)
+            if (test_elimac_csv(fp, random_key1, random_key2, message, len, tag_len, 0, 0, tag, len, parallel, 1) < 0)
             {
                 free(message);
                 return;
             }
 
             // Random keys, precomputation
-            if (test_elimac_csv(fp, random_key1, random_key2, message, len, tag_len, 1, max_blocks, tag, len, parallel) < 0)
+            if (test_elimac_csv(fp, random_key1, random_key2, message, len, tag_len, 1, max_blocks, tag, len, parallel, 1) < 0)
             {
                 free(message);
                 return;
@@ -117,7 +117,7 @@ void run_single_message_csv(FILE *fp, const char *message, int random_keys, int 
     uint32_t max_blocks = (len + BLOCK_SIZE - 1) / BLOCK_SIZE;
     uint8_t tag[BLOCK_SIZE];
 
-    double time_us = test_elimac_csv(fp, key1, key2, (uint8_t *)message, len, tag_bits, precompute, max_blocks, tag, len, parallel);
+    double time_us = test_elimac_csv(fp, key1, key2, (uint8_t *)message, len, tag_bits, precompute, max_blocks, tag, len, parallel, random_keys);
     if (time_us < 0)
     {
         fprintf(stderr, "EliMAC failed for single message\n");
@@ -196,7 +196,7 @@ int main(int argc, char *argv[])
     }
 
     // CSV header
-    fprintf(fp, "MessageLength,TagBits,Precompute,Parallel,RandomKeys,Tag,TimeUs\n");
+    fprintf(fp, "MessageLength;TagBits;Precompute;Parallel;RandomKeys;Tag;TimeUs\n");
 
     if (run_test)
     {
