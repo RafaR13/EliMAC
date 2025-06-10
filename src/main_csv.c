@@ -16,8 +16,10 @@ double test_elimac_csv(FILE *output_file, const uint8_t *key1, const uint8_t *ke
 
     for (int i = 0; i < iterations; i++)
     {
+        _mm_lfence(); // Ensure memory operations are complete before timing
         start = __rdtsc();
         ret = elimac(key1, key2, message, message_length, tag, tag_bits, precompute, max_blocks, parallel, encoding);
+        _mm_lfence(); // Ensure memory operations are complete after timing
         end = __rdtsc();
         if (ret != 0)
         {

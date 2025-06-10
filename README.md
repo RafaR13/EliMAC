@@ -7,6 +7,21 @@ Rafael Ribeiro ist1102975
 - implement precomputation
 - test variances in the algorithm, such as precomputation, to see what changes in performance or security
 
+```
+sudo echo 0 > /sys/devices/system/cpu/cpufreq/boost
+cat /sys/devices/system/cpu/cpufreq/boost
+
+sudo cpupower frequency-set -g performance
+cpupower frequency-info
+
+taskset -c 0-7 ./elimac_csv --test --encoding 2 --parallel
+
+perf stat -e cache-misses,L1-dcache-load-misses ./elimac_csv --test --encoding 2
+```
+
+
+
+
 # Usage
 To compile and generate two executables (.txt output and .csv output)
 ```bash
