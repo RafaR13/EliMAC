@@ -14,6 +14,6 @@
 #define MAX_BLOCKS (1ULL << 32)
 
 int elimac(const uint8_t *key1, const uint8_t *key2, const uint8_t *message, size_t len,
-           uint8_t *tag, int t, int precompute, size_t max_blocks, int parallel);
+           uint8_t *tag, int t, int precompute, size_t max_blocks, int parallel, int variant);
 
 #endif

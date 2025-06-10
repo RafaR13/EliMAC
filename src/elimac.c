@@ -1,7 +1,7 @@
 #include "headers/elimac.h"
 
 int elimac(const uint8_t *key1, const uint8_t *key2, const uint8_t *message, size_t len,
-           uint8_t *tag, int t, int precompute, size_t max_blocks, int parallel)
+           uint8_t *tag, int t, int precompute, size_t max_blocks, int parallel, int variant)
 {
     if (t > 128 || t < 0)
     {
@@ -38,14 +38,14 @@ int elimac(const uint8_t *key1, const uint8_t *key2, const uint8_t *message, siz
             fprintf(stderr, "Memory allocation failed\n");
             return -1;
         }
-        precompute_subkeys(key1, subkeys, max_blocks, round_keys_7);
+        precompute_subkeys(key1, subkeys, max_blocks, round_keys_7, variant);
     }
 
     // Initialize state
     uint8_t state[BLOCK_SIZE] = {0};
 
     // process blocks 1 to l-1
-    elihash(state, key1, num_blocks, round_keys_7, subkeys, precompute, padded, round_keys_4, parallel);
+    elihash(state, key1, num_blocks, round_keys_7, subkeys, precompute, padded, round_keys_4, parallel, variant);
 
     // Last block: S = S XOR M_l
     if (num_blocks > 0)

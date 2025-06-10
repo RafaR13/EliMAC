@@ -17,6 +17,9 @@ CSV_OBJECTS = $(CSV_MAIN:.c=.o) $(OBJECTS)
 # Header dependencies
 DEPS = $(HEADER_DIR)/elimac.h $(HEADER_DIR)/elihash.h $(HEADER_DIR)/utils.h $(HEADER_DIR)/main.h
 
+# Default encoding (0: naive, 1: compact, 2: both)
+ENCODING ?= 2
+
 all: $(TEXT_TARGET) $(CSV_TARGET)
 
 $(TEXT_TARGET): $(TEXT_OBJECTS)
@@ -32,14 +35,14 @@ out:
 	@mkdir -p out
 
 run_text: out $(TEXT_TARGET)
-	./$(TEXT_TARGET) --test
+	./$(TEXT_TARGET) --test --encoding $(ENCODING)
 
 run_csv: out $(CSV_TARGET)
-	./$(CSV_TARGET) --test
+	./$(CSV_TARGET) --test --encoding $(ENCODING)
 
 run_all: out $(TEXT_TARGET) $(CSV_TARGET)
-	./$(TEXT_TARGET) --test
-	./$(CSV_TARGET) --test
+	./$(TEXT_TARGET) --test --encoding $(ENCODING)
+	./$(CSV_TARGET) --test --encoding $(ENCODING)
 
 clean:
 	rm -f $(TEXT_TARGET) $(CSV_TARGET) $(SRC_DIR)/*.o

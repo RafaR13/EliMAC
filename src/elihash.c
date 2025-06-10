@@ -2,7 +2,7 @@
 
 // 7-round AES-128 (TODO: maybe try different variations ?)
 void hash_h(const uint8_t *key, uint32_t counter, uint8_t *output,
-            const uint8_t *round_keys, const uint8_t *subkeys, int precompute)
+            const uint8_t *round_keys, const uint8_t *subkeys, int precompute, int variant)
 {
     if (precompute && subkeys)
     {
@@ -11,7 +11,7 @@ void hash_h(const uint8_t *key, uint32_t counter, uint8_t *output,
     else
     {
         uint8_t counter_bytes[BLOCK_SIZE];
-        encode_counter(counter, counter_bytes);
+        encode_counter(counter, counter_bytes, variant);
         aes_encrypt(counter_bytes, round_keys, output, 7);
     }
 }
@@ -29,7 +29,7 @@ void hash_i(const uint8_t *h_output, const uint8_t *message_block, uint8_t *outp
 }
 
 void elihash(uint8_t *state, const uint8_t *key1, size_t num_blocks, uint8_t *round_keys_7,
-             uint8_t *subkeys, int precompute, uint8_t *padded, uint8_t *round_keys_4, int parallel)
+             uint8_t *subkeys, int precompute, uint8_t *padded, uint8_t *round_keys_4, int parallel, int variant)
 {
     if (parallel)
     {
@@ -41,7 +41,7 @@ void elihash(uint8_t *state, const uint8_t *key1, size_t num_blocks, uint8_t *ro
             for (size_t i = 0; i < num_blocks - 1; i++)
             {
                 uint8_t h_output[BLOCK_SIZE], i_output[BLOCK_SIZE];
-                hash_h(key1, i + 1, h_output, round_keys_7, subkeys, precompute);
+                hash_h(key1, i + 1, h_output, round_keys_7, subkeys, precompute, variant);
                 hash_i(h_output, padded + i * BLOCK_SIZE, i_output, round_keys_4);
                 for (int j = 0; j < BLOCK_SIZE; j++)
                 {
@@ -60,7 +60,7 @@ void elihash(uint8_t *state, const uint8_t *key1, size_t num_blocks, uint8_t *ro
         for (size_t i = 0; i < num_blocks - 1; i++)
         {
             uint8_t h_output[BLOCK_SIZE], i_output[BLOCK_SIZE];
-            hash_h(key1, i + 1, h_output, round_keys_7, subkeys, precompute);
+            hash_h(key1, i + 1, h_output, round_keys_7, subkeys, precompute, variant);
             hash_i(h_output, padded + i * BLOCK_SIZE, i_output, round_keys_4);
             for (int j = 0; j < BLOCK_SIZE; j++)
             {
@@ -74,7 +74,7 @@ void elihash(uint8_t *state, const uint8_t *key1, size_t num_blocks, uint8_t *ro
         for (size_t i = 0; i < num_blocks - 1; i++)
         {
             uint8_t h_output[BLOCK_SIZE], i_output[BLOCK_SIZE];
-            hash_h(key1, i + 1, h_output, round_keys_7, subkeys, precompute);
+            hash_h(key1, i + 1, h_output, round_keys_7, subkeys, precompute, variant);
             hash_i(h_output, padded + i * BLOCK_SIZE, i_output, round_keys_4);
             for (int j = 0; j < BLOCK_SIZE; j++)
             {
@@ -85,12 +85,12 @@ void elihash(uint8_t *state, const uint8_t *key1, size_t num_blocks, uint8_t *ro
 }
 
 void precompute_subkeys(const uint8_t *key, uint8_t *subkeys, size_t max_blocks,
-                        const uint8_t *round_keys)
+                        const uint8_t *round_keys, int variant)
 {
     for (uint32_t i = 1; i <= max_blocks; i++)
     {
         uint8_t counter[BLOCK_SIZE];
-        encode_counter(i, counter);
+        encode_counter(i, counter, variant);
         aes_encrypt(counter, round_keys, subkeys + (i - 1) * BLOCK_SIZE, 7);
     }
 }

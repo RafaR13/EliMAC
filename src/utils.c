@@ -89,7 +89,7 @@ void aes_encrypt(const uint8_t *input, const uint8_t *round_keys, uint8_t *outpu
     _mm_storeu_si128((__m128i *)output, state);
 }
 
-int encode_counter(uint32_t counter, uint8_t *output)
+int encode_counter(uint32_t counter, uint8_t *output, int variant)
 {
     if (counter < 1 || counter > MAX_BLOCKS)
     {
@@ -101,11 +101,22 @@ int encode_counter(uint32_t counter, uint8_t *output)
         fprintf(stderr, "Null output in encode_counter\n");
         return -1;
     }
+
     uint8_t counter_bytes[4] = {
         (counter >> 24) & 0xFF, (counter >> 16) & 0xFF, (counter >> 8) & 0xFF, counter & 0xFF};
-    for (int i = 0; i < 4; i++)
+    if (variant)
     {
-        memcpy(output + i * 4, counter_bytes, 4);
+        // Compact: 32-bit counter in last 4 bytes, 96 zero bits
+        memset(output, 0, BLOCK_SIZE);
+        memcpy(output + 12, counter_bytes, 4);
+    }
+    else
+    {
+        // Naive: Repeat 32-bit counter four times
+        for (int i = 0; i < 4; i++)
+        {
+            memcpy(output + i * 4, counter_bytes, 4);
+        }
     }
     return 1;
 }
