@@ -5,6 +5,9 @@
 #include <stddef.h>
 #include "elimac.h"
 #include <stdio.h>
+#include <immintrin.h>
+#include <stdlib.h>
+#include <string.h>
 
 int aes_key_schedule(const uint8_t *key, uint8_t *round_keys, int rounds);
 void aes_encrypt(const uint8_t *input, const uint8_t *round_keys, uint8_t *output, int rounds);
