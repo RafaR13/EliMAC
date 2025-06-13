@@ -22,10 +22,14 @@ int elimac(const uint8_t *key1, const uint8_t *key2, const uint8_t *message, siz
     }
 
     // Key schedules (basically generates round keys for AES)
-    uint8_t /*round_keys_7[KEY_SIZE * 8],*/ round_keys_4[KEY_SIZE * 5], round_keys_10[KEY_SIZE * 11];
+    uint8_t local_round_keys_7[KEY_SIZE * 8], round_keys_4[KEY_SIZE * 5], round_keys_10[KEY_SIZE * 11];
     if (!round_keys_7 || round_keys_7 == NULL)
     {
-        aes_key_schedule(key1, round_keys_7, 7);
+        aes_key_schedule(key1, local_round_keys_7, 7);
+    }
+    else
+    {
+        memcpy(local_round_keys_7, round_keys_7, KEY_SIZE * 8);
     }
     aes_key_schedule(key1, round_keys_4, 4);
     aes_key_schedule(key2, round_keys_10, 10);
@@ -38,25 +42,11 @@ int elimac(const uint8_t *key1, const uint8_t *key2, const uint8_t *message, siz
         return -1;
     }
 
-    /*// Precompute subkeys
-    uint8_t *subkeys = NULL;
-    if (precompute && max_blocks > 0)
-    {
-        subkeys = malloc(max_blocks * BLOCK_SIZE);
-        if (!subkeys)
-        {
-            free(padded);
-            fprintf(stderr, "Memory allocation failed\n");
-            return -1;
-        }
-        precompute_subkeys(key1, subkeys, max_blocks, round_keys_7, variant);
-    }*/
-
     // Initialize state
     uint8_t state[BLOCK_SIZE] = {0};
 
     // process blocks 1 to l-1
-    elihash(state, key1, num_blocks, round_keys_7, subkeys, precompute, padded, round_keys_4, parallel, variant);
+    elihash(state, num_blocks, local_round_keys_7, subkeys, precompute, padded, round_keys_4, parallel, variant);
 
     // Last block: S = S XOR M_l
     if (num_blocks > 0)
@@ -76,7 +66,5 @@ int elimac(const uint8_t *key1, const uint8_t *key2, const uint8_t *message, siz
     memcpy(tag, final, t / 8);
 
     free(padded);
-    // if (subkeys)
-    //     free(subkeys);
     return 0;
 }

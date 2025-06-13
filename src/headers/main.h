@@ -8,13 +8,11 @@
 #include <x86intrin.h>
 
 #define CPU_FREQ 3.2e9 / 1e6
-#define ITERATIONS 100
+#define ITERATIONS 1000
 #define DEFAULT_OUTPUT_FORMAT "csv"
 
 #ifndef MAIN_H
 #define MAIN_H
-
-#define ITERATIONS 100
 
 double test_elimac(FILE *output_file, const char *output_format, const uint8_t *key1,
                    const uint8_t *key2, const uint8_t *message, size_t message_length,

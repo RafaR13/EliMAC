@@ -87,7 +87,7 @@ void aes_encrypt(const uint8_t *input, const uint8_t *round_keys, uint8_t *outpu
 
 int encode_counter(uint32_t counter, uint8_t *output, int variant)
 {
-    if (counter < 1 || counter > MAX_BLOCKS)
+    if (counter < 1 || counter > 0xFFFFFFFF) // TODO: check this counter range
     {
         fprintf(stderr, "Counter out of range [1, 2^32]\n");
         return -1;
