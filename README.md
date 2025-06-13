@@ -24,6 +24,8 @@ Output: ```out/elimac_results.csv```
 make run_txt
 ```
 Output: ```out/elimac_results.txt```
+
+<b>Note: AVOID USING THE TEXT OUTPUT FORMAT AS IT'S STILL NOT COMPLETELY CORRECT</b>
 ### Single Message
 ```bash
 taskset -c 0-7 ./elimac --run --message "Test" --output-format txt

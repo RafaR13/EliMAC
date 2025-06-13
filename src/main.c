@@ -6,27 +6,43 @@ double test_elimac(FILE *output_file, const char *output_format, const uint8_t *
     int ret;
     double result = 0.0;
 
+    // Pad message
+    uint8_t *padded;
+    size_t padded_len;
+    if (pad_message(message, len, &padded, &padded_len) < 0)
+    {
+        fprintf(stderr, "Message padding failed\n");
+        return -1.0;
+    }
+
     // Precompute subkeys and round_keys_7 outside timing loop
     uint8_t *subkeys = NULL;
     uint8_t round_keys_7[KEY_SIZE * 8] = {0};
+    if (aes_key_schedule(key1, round_keys_7, 7) < 0)
+    {
+        fprintf(stderr, "AES key schedule failed\n");
+        free(padded);
+        return -1.0;
+    }
     if (precompute && max_blocks > 0)
     {
         subkeys = malloc(max_blocks * BLOCK_SIZE);
         if (!subkeys)
         {
             fprintf(stderr, "Memory allocation failed\n");
+            free(padded);
             return -1.0;
         }
-        aes_key_schedule(key1, round_keys_7, 7);
         precompute_subkeys(subkeys, max_blocks, round_keys_7, variant);
     }
 
     // Warm-up run
-    ret = elimac(key1, key2, message, len, tag, tag_bits, precompute, max_blocks, parallel, variant, subkeys, precompute ? round_keys_7 : NULL);
+    ret = elimac(key1, key2, padded, padded_len, tag, tag_bits, precompute, max_blocks, parallel, variant, subkeys, precompute ? round_keys_7 : NULL);
     if (ret != 0)
     {
         if (subkeys)
             free(subkeys);
+        free(padded);
         fprintf(stderr, "EliMAC warm-up failed\n");
         return -1.0;
     }
@@ -37,13 +53,14 @@ double test_elimac(FILE *output_file, const char *output_format, const uint8_t *
     {
         _mm_lfence();
         start = __rdtsc();
-        ret = elimac(key1, key2, message, len, tag, tag_bits, precompute, max_blocks, parallel, variant, subkeys, precompute ? round_keys_7 : NULL);
+        ret = elimac(key1, key2, padded, padded_len, tag, tag_bits, precompute, max_blocks, parallel, variant, subkeys, precompute ? round_keys_7 : NULL);
         _mm_lfence();
         end = __rdtsc();
         if (ret != 0)
         {
             if (subkeys)
                 free(subkeys);
+            free(padded);
             fprintf(stderr, "EliMAC failed in iteration %d\n", i);
             return -1.0;
         }
@@ -73,10 +90,11 @@ double test_elimac(FILE *output_file, const char *output_format, const uint8_t *
 
     if (subkeys)
         free(subkeys);
+    free(padded);
     return result;
 }
 
-void run_test_suite(FILE *output_file, const char *output_format, int parallel, int encoding)
+void run_test_suite(FILE *output_file, const char *output_format, int encoding)
 {
     srand(SEED);
     uint8_t fixed_key1[KEY_SIZE] = {0x2b, 0x7e, 0x15, 0x16, 0x28, 0xae, 0xd2, 0xa6,
@@ -92,85 +110,88 @@ void run_test_suite(FILE *output_file, const char *output_format, int parallel, 
     int start_encoding = (encoding == 2) ? 0 : encoding;
     int end_encoding = (encoding == 2) ? 2 : encoding + 1;
 
-    for (int enc = start_encoding; enc < end_encoding; enc++)
+    for (int parallel = 0; parallel < 2; parallel++)
     {
-        if (strcmp(output_format, "txt") == 0)
-            fprintf(output_file, "\nEncoding: %s\n", enc ? "Compact" : "Naive");
-        for (int l = 0; l < num_lengths; l++)
+        for (int enc = start_encoding; enc < end_encoding; enc++)
         {
-            uint32_t len = lengths[l];
-            uint8_t *message = malloc(len);
-            if (!message)
-            {
-                fprintf(stderr, "Memory allocation failed for message\n");
-                return;
-            }
-            generate_random_message(message, len);
-            uint32_t max_blocks = (len + BLOCK_SIZE - 1) / BLOCK_SIZE;
-
             if (strcmp(output_format, "txt") == 0)
-                fprintf(output_file, "\nTesting message length: %u bytes (%u blocks), Parallel: %s\n",
-                        len, max_blocks, parallel ? "Yes" : "No");
-
-            for (int t = 0; t < num_tags; t++)
+                fprintf(output_file, "\nEncoding: %s\n", enc ? "Compact" : "Naive");
+            for (int l = 0; l < num_lengths; l++)
             {
-                int tag_len = tag_bits[t];
-
-                if (strcmp(output_format, "txt") == 0)
-                    fprintf(output_file, "\nFixed keys, no precomputation, %d-bit tag:\n", tag_len);
-                double time_no_precomp = test_elimac(output_file, output_format, fixed_key1, fixed_key2, message, len, tag_len, parallel, 0, 0, tag, 0, enc);
-                if (time_no_precomp < 0)
+                uint32_t len = lengths[l];
+                uint8_t *message = malloc(len);
+                if (!message)
                 {
-                    free(message);
+                    fprintf(stderr, "Memory allocation failed for message\n");
                     return;
                 }
-                if (strcmp(output_format, "txt") == 0)
-                    fprintf(output_file, "Avg time: %.2f us\n", time_no_precomp);
+                generate_random_message(message, len);
+                uint32_t max_blocks = (len + BLOCK_SIZE - 1) / BLOCK_SIZE;
 
                 if (strcmp(output_format, "txt") == 0)
-                    fprintf(output_file, "\nFixed keys, precomputation (%u blocks), %d-bit tag:\n", max_blocks, tag_len);
-                double time_precomp = test_elimac(output_file, output_format, fixed_key1, fixed_key2, message, len, tag_len, parallel, 1, max_blocks, tag, 0, enc);
-                if (time_precomp < 0)
-                {
-                    free(message);
-                    return;
-                }
-                if (strcmp(output_format, "txt") == 0)
-                {
-                    fprintf(output_file, "Avg time: %.2f us\n", time_precomp);
-                    fprintf(output_file, "Speedup: %.2fx\n", time_no_precomp / time_precomp);
-                }
+                    fprintf(output_file, "\nTesting message length: %u bytes (%u blocks), Parallel: %s\n",
+                            len, max_blocks, parallel ? "Yes" : "No");
 
-                uint8_t random_key1[KEY_SIZE], random_key2[KEY_SIZE];
-                generate_random_message(random_key1, KEY_SIZE);
-                generate_random_message(random_key2, KEY_SIZE);
+                for (int t = 0; t < num_tags; t++)
+                {
+                    int tag_len = tag_bits[t];
 
-                if (strcmp(output_format, "txt") == 0)
-                    fprintf(output_file, "\nRandom keys, no precomputation, %d-bit tag:\n", tag_len);
-                time_no_precomp = test_elimac(output_file, output_format, random_key1, random_key2, message, len, tag_len, parallel, 0, 0, tag, 0, enc);
-                if (time_no_precomp < 0)
-                {
-                    free(message);
-                    return;
-                }
-                if (strcmp(output_format, "txt") == 0)
-                    fprintf(output_file, "Avg time: %.2f us\n", time_no_precomp);
+                    if (strcmp(output_format, "txt") == 0)
+                        fprintf(output_file, "\nFixed keys, no precomputation, %d-bit tag:\n", tag_len);
+                    double time_no_precomp = test_elimac(output_file, output_format, fixed_key1, fixed_key2, message, len, tag_len, parallel, 0, 0, tag, 0, enc);
+                    if (time_no_precomp < 0)
+                    {
+                        free(message);
+                        return;
+                    }
+                    if (strcmp(output_format, "txt") == 0)
+                        fprintf(output_file, "Avg time: %.2f us\n", time_no_precomp);
 
-                if (strcmp(output_format, "txt") == 0)
-                    fprintf(output_file, "\nRandom keys, precomputation (%u blocks), %d-bit tag:\n", max_blocks, tag_len);
-                time_precomp = test_elimac(output_file, output_format, random_key1, random_key2, message, len, tag_len, parallel, 1, max_blocks, tag, 0, enc);
-                if (time_precomp < 0)
-                {
-                    free(message);
-                    return;
+                    if (strcmp(output_format, "txt") == 0)
+                        fprintf(output_file, "\nFixed keys, precomputation (%u blocks), %d-bit tag:\n", max_blocks, tag_len);
+                    double time_precomp = test_elimac(output_file, output_format, fixed_key1, fixed_key2, message, len, tag_len, parallel, 1, max_blocks, tag, 0, enc);
+                    if (time_precomp < 0)
+                    {
+                        free(message);
+                        return;
+                    }
+                    if (strcmp(output_format, "txt") == 0)
+                    {
+                        fprintf(output_file, "Avg time: %.2f us\n", time_precomp);
+                        fprintf(output_file, "Speedup: %.2fx\n", time_no_precomp / time_precomp);
+                    }
+
+                    uint8_t random_key1[KEY_SIZE], random_key2[KEY_SIZE];
+                    generate_random_message(random_key1, KEY_SIZE);
+                    generate_random_message(random_key2, KEY_SIZE);
+
+                    if (strcmp(output_format, "txt") == 0)
+                        fprintf(output_file, "\nRandom keys, no precomputation, %d-bit tag:\n", tag_len);
+                    time_no_precomp = test_elimac(output_file, output_format, random_key1, random_key2, message, len, tag_len, parallel, 0, 0, tag, 0, enc);
+                    if (time_no_precomp < 0)
+                    {
+                        free(message);
+                        return;
+                    }
+                    if (strcmp(output_format, "txt") == 0)
+                        fprintf(output_file, "Avg time: %.2f us\n", time_no_precomp);
+
+                    if (strcmp(output_format, "txt") == 0)
+                        fprintf(output_file, "\nRandom keys, precomputation (%u blocks), %d-bit tag:\n", max_blocks, tag_len);
+                    time_precomp = test_elimac(output_file, output_format, random_key1, random_key2, message, len, tag_len, parallel, 1, max_blocks, tag, 0, enc);
+                    if (time_precomp < 0)
+                    {
+                        free(message);
+                        return;
+                    }
+                    if (strcmp(output_format, "txt") == 0)
+                    {
+                        fprintf(output_file, "Avg time: %.2f us\n", time_precomp);
+                        fprintf(output_file, "Speedup: %.2fx\n", time_no_precomp / time_precomp);
+                    }
                 }
-                if (strcmp(output_format, "txt") == 0)
-                {
-                    fprintf(output_file, "Avg time: %.2f us\n", time_precomp);
-                    fprintf(output_file, "Speedup: %.2fx\n", time_no_precomp / time_precomp);
-                }
+                free(message);
             }
-            free(message);
         }
     }
 }
@@ -318,7 +339,7 @@ int main(int argc, char *argv[])
         printf("Output format: %s\n", output_format);
         printf("Parallel: %s\n", parallel ? "Yes" : "No");
         printf("Encoding: %s\n", encoding == 0 ? "Naive" : (encoding == 1 ? "Compact" : "Both"));
-        run_test_suite(output_file, output_format, parallel, encoding);
+        run_test_suite(output_file, output_format, encoding);
     }
     else
     {

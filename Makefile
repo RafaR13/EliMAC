@@ -54,6 +54,8 @@ run_csv: $(OUTDIR) $(TARGET)
 
 clean:
 	rm -f $(TARGET) $(SRC_DIR)/*.o
-	rm -rf $(OUTDIR)
 
 .PHONY: all run run_txt run_csv clean
+
+# rm -rf $(OUTDIR)
+# TODO: Put this inside "clean:" to also remove the output folder

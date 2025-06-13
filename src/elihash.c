@@ -29,7 +29,7 @@ void hash_i(const uint8_t *h_output, const uint8_t *message_block, uint8_t *outp
 }
 
 void elihash(uint8_t *state, size_t num_blocks, uint8_t *round_keys_7,
-             const uint8_t *subkeys, int precompute, uint8_t *padded, uint8_t *round_keys_4, int parallel, int variant)
+             const uint8_t *subkeys, int precompute, const uint8_t *padded, uint8_t *round_keys_4, int parallel, int variant)
 {
     if (parallel)
     {
