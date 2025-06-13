@@ -2,58 +2,55 @@
 
 Rafael Ribeiro ist1102975
 
-# TODO
-- implement EliMAC
-- implement precomputation
-- test variances in the algorithm, such as precomputation, to see what changes in performance or security
-
-```
-sudo echo 0 > /sys/devices/system/cpu/cpufreq/boost
-cat /sys/devices/system/cpu/cpufreq/boost
-
-sudo cpupower frequency-set -g performance
-cpupower frequency-info
-
-taskset -c 0-7 ./elimac_csv --test --encoding 2 --parallel
-
-perf stat -e cache-misses,L1-dcache-load-misses ./elimac_csv --test --encoding 2
-```
-
-
-
-
-# Usage
-To compile and generate two executables (.txt output and .csv output)
+## Compilation
+### Default (no OpenMP)
 ```bash
-make
+make clean && make
+```
+### Using OpenMP (for --parallel)
+```bash
+make clean && make PARALLEL=1
+```
+Output: ```./elimac```
+
+## Run
+### Test Suite (CSV output)
+```bash
+make run
+```
+Output: ```out/elimac_results.csv```
+### Test Suite (Text output)
+```bash
+make run_txt
+```
+Output: ```out/elimac_results.txt```
+### Single Message
+```bash
+taskset -c 0-7 ./elimac --run --message "Test" --output-format txt
+```
+#### Options
+- ```--random-keys```: Use random keys
+- ```--precompute```: Enable precomputation
+- ```--parallel```: Enable parallel processing
+- ```--tag-bits <32|64|96|128>```: Tag size
+- ```--encoding <0|1|2>```: Naive (0), Compact (1), Both (2)
+- ```--output-format <txt|csv>```: Output format
+
+Output: ```out/elimac_results.csv```
+
+## Profilling
+### To check ```CyclesPerByte```
+```bash
+perf stat -e cycles,instructions ./elimac --test --encoding 2 --parallel --output-format csv
+```
+### For detailed analysis
+```bash
+perf record ./elimac --test --encoding 2 --parallel --output-format csv
+perf report
 ```
 
-To run the full test suite
-```bash
-./elimac_text --test [--parallel]
-```
-
-To run a specific message (with options)
-```bash
-./elimac_text --run [--message "My custom message"] [--random-keys] [--precompute] [--parallel] [--tag-bits 64]
-```
-
-To compile, run and output to .txt
-```bash
-make run_text
-```
-
-To compile, run and output to .csv
-```bash
-make run_csv
-```
-
-To compile, run and output to both files
-```bash
-make run_all
-```
-
-To delete executables and .o files
-```bash
-make clean
-```
+## Notes
+- Results are saved in out/.
+- Use taskset for consistent CPU affinity.
+- ~~Expected CyclesPerByte: ~0.5–2 (target: 0.13–0.46).~~
+- Analyze CSV with python3 analyze_csv.py to get graphs.
