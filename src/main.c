@@ -78,7 +78,7 @@ double test_elimac(FILE *output_file, const char *output_format, const uint8_t *
 
 void run_test_suite(FILE *output_file, const char *output_format, int parallel, int encoding)
 {
-    srand(42);
+    srand(SEED);
     uint8_t fixed_key1[KEY_SIZE] = {0x2b, 0x7e, 0x15, 0x16, 0x28, 0xae, 0xd2, 0xa6,
                                     0xab, 0xf7, 0x15, 0x88, 0x09, 0xcf, 0x4f, 0x3c};
     uint8_t fixed_key2[KEY_SIZE] = {0x3c, 0x4f, 0xcf, 0x09, 0x88, 0x15, 0xf7, 0xab,
@@ -177,15 +177,18 @@ void run_test_suite(FILE *output_file, const char *output_format, int parallel, 
 
 void run_single_message(FILE *output_file, const char *output_format, const char *message, int random_keys, int precompute, int tag_bits, int parallel, int encoding)
 {
-    srand(42);
-    uint8_t key1[KEY_SIZE] = {0x2b, 0x7e, 0x15, 0x16, 0x28, 0xae, 0xd2, 0xa6,
-                              0xab, 0xf7, 0x15, 0x88, 0x09, 0xcf, 0x4f, 0x3c};
-    uint8_t key2[KEY_SIZE] = {0x3c, 0x4f, 0xcf, 0x09, 0x88, 0x15, 0xf7, 0xab,
-                              0xa6, 0xd2, 0xae, 0x28, 0x16, 0x15, 0x7e, 0x2b};
+    srand(SEED);
+    uint8_t key1[KEY_SIZE], key2[KEY_SIZE];
+
     if (random_keys)
-    {
+    { // random keys
         generate_random_message(key1, KEY_SIZE);
         generate_random_message(key2, KEY_SIZE);
+    }
+    else
+    { // fixed keys
+        memcpy(key1, (uint8_t[]){0x2b, 0x7e, 0x15, 0x16, 0x28, 0xae, 0xd2, 0xa6, 0xab, 0xf7, 0x15, 0x88, 0x09, 0xcf, 0x4f, 0x3c}, KEY_SIZE);
+        memcpy(key2, (uint8_t[]){0x3c, 0x4f, 0xcf, 0x09, 0x88, 0x15, 0xf7, 0xab, 0xa6, 0xd2, 0xae, 0x28, 0x16, 0x15, 0x7e, 0x2b}, KEY_SIZE);
     }
 
     uint32_t len = (uint32_t)strlen(message);
@@ -221,7 +224,7 @@ void run_single_message(FILE *output_file, const char *output_format, const char
 
 int main(int argc, char *argv[])
 {
-    char *message = "Hello, EliMAC!";
+    char *message = DEFAULT_MESSAGE;
     int random_keys = 0;
     int precompute = 0;
     int tag_bits = 128;
@@ -257,7 +260,7 @@ int main(int argc, char *argv[])
         {
             parallel = 1;
         }
-        else if (strcmp(argv[i], "--tag_bits") == 0 && i + 1 < argc)
+        else if (strcmp(argv[i], "--tag-bits") == 0 && i + 1 < argc)
         {
             tag_bits = atoi(argv[++i]);
             if (tag_bits != 32 && tag_bits != 64 && tag_bits != 96 && tag_bits != 128)
@@ -311,10 +314,21 @@ int main(int argc, char *argv[])
 
     if (run_test)
     {
+        printf("Running test suite...\n");
+        printf("Output format: %s\n", output_format);
+        printf("Parallel: %s\n", parallel ? "Yes" : "No");
+        printf("Encoding: %s\n", encoding == 0 ? "Naive" : (encoding == 1 ? "Compact" : "Both"));
         run_test_suite(output_file, output_format, parallel, encoding);
     }
     else
     {
+        printf("Running single message test...\n");
+        printf("Message: \"%s\"\n", message);
+        printf("Random keys: %s\n", random_keys ? "Yes" : "No");
+        printf("Precompute: %s\n", precompute ? "Yes" : "No");
+        printf("Tag bits: %d\n", tag_bits);
+        printf("Parallel: %s\n", parallel ? "Yes" : "No");
+        printf("Encoding: %s\n", encoding == 0 ? "Naive" : (encoding == 1 ? "Compact" : "Both"));
         run_single_message(output_file, output_format, message, random_keys, precompute, tag_bits, parallel, encoding);
     }
 

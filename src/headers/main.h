@@ -10,6 +10,8 @@
 #define CPU_FREQ 3.2e9 / 1e6
 #define ITERATIONS 1000
 #define DEFAULT_OUTPUT_FORMAT "csv"
+#define SEED 42
+#define DEFAULT_MESSAGE "Hello, EliMAC!"
 
 #ifndef MAIN_H
 #define MAIN_H
