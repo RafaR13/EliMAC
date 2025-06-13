@@ -13,6 +13,8 @@ endif
 SRC_DIR = src
 HEADER_DIR = $(SRC_DIR)/headers
 OUTDIR = out
+GRAPH_DIR = graphs
+TABLE_DIR = tables
 
 # Source files
 COMMON_SOURCES = $(SRC_DIR)/elimac.c $(SRC_DIR)/elihash.c $(SRC_DIR)/utils.c
@@ -57,5 +59,5 @@ clean:
 
 .PHONY: all run run_txt run_csv clean
 
-# rm -rf $(OUTDIR)
+# rm -rf $(OUTDIR) $(GRAPH_DIR) $(TABLE_DIR)
 # TODO: Put this inside "clean:" to also remove the output folder
