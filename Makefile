@@ -1,18 +1,27 @@
+# Compiler and flags
 CC = gcc
-CFLAGS = -O3 -maes -msse4.2 -Wall -Isrc/headers -fopenmp
-LDFLAGS = -fopenmp
+CFLAGS = -O3 -maes -msse4.2 -Wall -Wextra -I$(HEADER_DIR)
+LDFLAGS =
+
+# Conditional OpenMP support
+ifeq ($(PARALLEL), 1)
+    CFLAGS += -fopenmp
+    LDFLAGS += -fopenmp
+endif
+
+# Directories
 SRC_DIR = src
 HEADER_DIR = $(SRC_DIR)/headers
+OUTDIR = out
+
+# Source files
 COMMON_SOURCES = $(SRC_DIR)/elimac.c $(SRC_DIR)/elihash.c $(SRC_DIR)/utils.c
-OBJECTS = $(COMMON_SOURCES:.c=.o)
+MAIN_SOURCE = $(SRC_DIR)/main.c
+SOURCES = $(MAIN_SOURCE) $(COMMON_SOURCES)
+OBJECTS = $(SOURCES:.c=.o)
 
-TEXT_TARGET = elimac_text
-TEXT_MAIN = $(SRC_DIR)/main.c
-TEXT_OBJECTS = $(TEXT_MAIN:.c=.o) $(OBJECTS)
-
-CSV_TARGET = elimac_csv
-CSV_MAIN = $(SRC_DIR)/main_csv.c
-CSV_OBJECTS = $(CSV_MAIN:.c=.o) $(OBJECTS)
+# Executable
+TARGET = elimac
 
 # Header dependencies
 DEPS = $(HEADER_DIR)/elimac.h $(HEADER_DIR)/elihash.h $(HEADER_DIR)/utils.h $(HEADER_DIR)/main.h
@@ -20,32 +29,31 @@ DEPS = $(HEADER_DIR)/elimac.h $(HEADER_DIR)/elihash.h $(HEADER_DIR)/utils.h $(HE
 # Default encoding (0: naive, 1: compact, 2: both)
 ENCODING ?= 2
 
-all: $(TEXT_TARGET) $(CSV_TARGET)
+# Default output format (txt or csv)
+OUTPUT_FORMAT ?= csv
 
-$(TEXT_TARGET): $(TEXT_OBJECTS)
-	$(CC) $(TEXT_OBJECTS) -o $@ $(LDFLAGS)
+all: $(OUTDIR) $(TARGET)
 
-$(CSV_TARGET): $(CSV_OBJECTS)
-	$(CC) $(CSV_OBJECTS) -o $@ $(LDFLAGS)
+$(OUTDIR):
+	@mkdir -p $(OUTDIR)
+
+$(TARGET): $(OBJECTS)
+	$(CC) $(OBJECTS) -o $@ $(LDFLAGS)
 
 $(SRC_DIR)/%.o: $(SRC_DIR)/%.c $(DEPS)
 	$(CC) $(CFLAGS) -c $< -o $@
 
-out:
-	@mkdir -p out
+run: $(OUTDIR) $(TARGET)
+	taskset -c 0-7 ./$(TARGET) --test --encoding $(ENCODING) --parallel --output-format $(OUTPUT_FORMAT)
 
-run_text: out $(TEXT_TARGET)
-	./$(TEXT_TARGET) --test --encoding $(ENCODING)
+run_txt: $(OUTDIR) $(TARGET)
+	taskset -c 0-7 ./$(TARGET) --test --encoding $(ENCODING) --parallel --output-format txt
 
-run_csv: out $(CSV_TARGET)
-	./$(CSV_TARGET) --test --encoding $(ENCODING)
-
-run_all: out $(TEXT_TARGET) $(CSV_TARGET)
-	./$(TEXT_TARGET) --test --encoding $(ENCODING)
-	./$(CSV_TARGET) --test --encoding $(ENCODING)
+run_csv: $(OUTDIR) $(TARGET)
+	taskset -c 0-7 ./$(TARGET) --test --encoding $(ENCODING) --parallel --output-format csv
 
 clean:
-	rm -f $(TEXT_TARGET) $(CSV_TARGET) $(SRC_DIR)/*.o
-	rm -rf out
+	rm -f $(TARGET) $(SRC_DIR)/*.o
+	rm -rf $(OUTDIR)
 
-.PHONY: all run_text run_csv run_all clean
+.PHONY: all run run_txt run_csv clean
