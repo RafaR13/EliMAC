@@ -72,7 +72,7 @@ double test_elimac(FILE *output_file, const char *output_format, const uint8_t *
 
     if (strcmp(output_format, "csv") == 0)
     {
-        fprintf(output_file, "%zu;%d;%d;%d;%d;%s;0;", len, tag_bits, precompute, parallel, verbose, variant == 0 ? "Naive" : (variant == 1 ? "Compact" : (variant == 2 ? "Custom1" : "Custom2")));
+        fprintf(output_file, "%zu;%d;%d;%d;%d;%d;0;", len, tag_bits, precompute, parallel, verbose, variant);
         print_tag(output_file, tag, tag_bits, 0);
         fprintf(output_file, ";%.2f;%.2f\n", time_us, cycles_per_byte);
         result = cycles_per_byte;

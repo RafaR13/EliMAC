@@ -35,6 +35,11 @@ df['MessageLength'] = pd.to_numeric(df['MessageLength'], errors='coerce')
 df['SpeedMBps'] = df['MessageLength'] / (df['TimeUs'] * 1e6) * 1e6
 df.dropna(subset=['CyclesPerByte', 'SpeedMBps'], inplace=True)
 
+# Map numeric encodings to labels if needed
+encoding_map = {0: 'Naive', 1: 'Compact', 2: 'Custom1', 3: 'Custom2'}
+if df['Encoding'].dtype in ['int64', 'float64']:
+    df['Encoding'] = df['Encoding'].map(encoding_map).fillna(df['Encoding'])
+
 # Set Seaborn style
 sns.set(style="whitegrid", palette="deep", font_scale=1.1)
 
@@ -43,20 +48,26 @@ grouped_cycles = df.groupby(['MessageLength', 'Encoding', 'Precompute', 'Paralle
 with open(f'{TABLES_DIR}/cycles_table.txt', 'w') as f:
     f.write("Mean CyclesPerByte:\n")
     f.write(grouped_cycles.to_string(float_format="%.2f"))
-    if 'Naive' in grouped_cycles.columns and 'Compact' in grouped_cycles.columns:
-        f.write("\n\nSpeedup (Naive / Compact):\n")
-        grouped_cycles['Speedup'] = grouped_cycles['Naive'] / grouped_cycles['Compact']
-        f.write(grouped_cycles['Speedup'].to_string(float_format="%.2f"))
+    valid_encodings = [e for e in ['Compact', 'Variant2', 'Variant3'] if e in grouped_cycles.columns]
+    if 'Naive' in grouped_cycles.columns and valid_encodings:
+        f.write("\n\nSpeedups (Naive / Other):\n")
+        for enc in valid_encodings:
+            grouped_cycles[f'Speedup_{enc}'] = grouped_cycles['Naive'] / grouped_cycles[enc]
+            f.write(f"\nNaive / {enc}:\n")
+            f.write(grouped_cycles[f'Speedup_{enc}'].to_string(float_format="%.2f"))
 
 # Table 2: Mean Speed (MB/s) by MessageLength, Encoding, Precompute, Parallel, TagBits, RandomKeys
 grouped_speed = df.groupby(['MessageLength', 'Encoding', 'Precompute', 'Parallel', 'TagBits', 'RandomKeys'])['SpeedMBps'].mean().unstack('Encoding')
 with open(f'{TABLES_DIR}/speed_table.txt', 'w') as f:
     f.write("Mean Speed (MB/s):\n")
     f.write(grouped_speed.to_string(float_format="%.2f"))
-    if 'Naive' in grouped_speed.columns and 'Compact' in grouped_speed.columns:
-        f.write("\n\nSpeedup (Compact / Naive):\n")
-        grouped_speed['Speedup'] = grouped_speed['Compact'] / grouped_speed['Naive']
-        f.write(grouped_speed['Speedup'].to_string(float_format="%.2f"))
+    valid_encodings = [e for e in ['Compact', 'Variant2', 'Variant3'] if e in grouped_speed.columns]
+    if 'Naive' in grouped_speed.columns and valid_encodings:
+        f.write("\n\nSpeedups (Other / Naive):\n")
+        for enc in valid_encodings:
+            grouped_speed[f'Speedup_{enc}'] = grouped_speed[enc] / grouped_speed['Naive']
+            f.write(f"\n{enc} / Naive:\n")
+            f.write(grouped_speed[f'Speedup_{enc}'].to_string(float_format="%.2f"))
 
 # Graph 1: Cycles/Byte vs. MessageLength for Precompute=0,1, Parallel=0, TagBits=128, RandomKeys=0
 for precomp in [0, 1]:
@@ -103,19 +114,23 @@ for parallel in [0, 1]:
     plt.savefig(f'{GRAPH_DIRS["cycles"]}/cycles_parallel_{parallel}_precomp_1.png', dpi=300)
     plt.close()
 
-# Graph 4: Speedup (Naive/Compact) vs. MessageLength for Precompute=0,1, Parallel=0, TagBits=128, RandomKeys=0
+# Graph 4: Speedup (Naive/Other) vs. MessageLength for Precompute=0,1, Parallel=0, TagBits=128, RandomKeys=0
 subset = df[(df['TagBits'] == 128) & (df['RandomKeys'] == 0) & (df['Parallel'] == 0)]
 if not subset.empty:
     pivot = subset.pivot_table(index=['MessageLength', 'Precompute'], columns='Encoding', values='CyclesPerByte')
-    if 'Naive' in pivot.columns and 'Compact' in pivot.columns:
-        pivot['Speedup'] = pivot['Naive'] / pivot['Compact']
-        pivot = pivot.reset_index()
+    valid_encodings = [e for e in ['Compact', 'Variant2', 'Variant3'] if e in pivot.columns]
+    if 'Naive' in pivot.columns and valid_encodings:
         plt.figure(figsize=(10, 6))
-        sns.lineplot(data=pivot, x='MessageLength', y='Speedup', hue='Precompute', style='Precompute', markers=True)
+        for enc in valid_encodings:
+            pivot[f'Speedup_{enc}'] = pivot['Naive'] / pivot[enc]
+            temp = pivot.reset_index()[['MessageLength', 'Precompute', f'Speedup_{enc}']].copy()
+            temp['Encoding'] = enc
+            temp.rename(columns={f'Speedup_{enc}': 'Speedup'}, inplace=True)
+            sns.lineplot(data=temp, x='MessageLength', y='Speedup', hue='Encoding', style='Precompute', markers=True)
         plt.xscale('log')
-        plt.title('Speedup (Naive/Compact) vs. Message Length (Parallel=0, 128-bit Tag, Fixed Keys)')
+        plt.title('Speedup (Naive/Other) vs. Message Length (Parallel=0, 128-bit Tag, Fixed Keys)')
         plt.xlabel('Message Length (Bytes, Log Scale)')
-        plt.ylabel('Speedup (Naive/Compact)')
+        plt.ylabel('Speedup (Naive/Other)')
         plt.savefig(f'{GRAPH_DIRS["speedup"]}/speedup_encoding_parallel_0.png', dpi=300)
         plt.close()
 
@@ -161,15 +176,17 @@ with open(f'{TABLES_DIR}/analysis_summary.txt', 'w') as f:
     
     # Key Observations
     f.write("Key Observations:\n")
-    if 'Naive' in grouped_cycles.columns and 'Compact' in grouped_cycles.columns:
-        mean_speedup = (grouped_cycles['Naive'] / grouped_cycles['Compact']).mean()
-        f.write(f"- Average Speedup (Naive/Compact): {mean_speedup:.2f}x\n")
+    valid_encodings = [e for e in ['Compact', 'Variant2', 'Variant3'] if e in grouped_cycles.columns]
+    if 'Naive' in grouped_cycles.columns and valid_encodings:
+        for enc in valid_encodings:
+            mean_speedup = (grouped_cycles['Naive'] / grouped_cycles[enc]).mean()
+            f.write(f"- Average Speedup (Naive/{enc}): {mean_speedup:.2f}x\n")
     precomp_diff = grouped_cycles.xs(1, level='Precompute').mean() / grouped_cycles.xs(0, level='Precompute').mean()
     f.write(f"- Precompute=1 vs. Precompute=0 (Avg Cycles/Byte Ratio): {precomp_diff.mean():.2f}x\n")
     parallel_diff = grouped_cycles.xs(1, level='Parallel').mean() / grouped_cycles.xs(0, level='Parallel').mean()
     f.write(f"- Parallel=1 vs. Parallel=0 (Avg Cycles/Byte Ratio): {parallel_diff.mean():.2f}x\n")
     f.write("\nRecommendations:\n")
-    f.write("- Optimize for Compact encoding if speedup > 1.\n")
+    f.write("- Optimize for Compact/Variant2/Variant3 if speedup > 1.\n")
     f.write("- Use Precompute for large messages if ratio < 1.\n")
     f.write("- Evaluate Parallel=1 overhead for small messages.\n")
     f.write("- Check AES-NI efficiency if Cycles/Byte > 0.46.\n")
