@@ -72,7 +72,7 @@ double test_elimac(FILE *output_file, const char *output_format, const uint8_t *
 
     if (strcmp(output_format, "csv") == 0)
     {
-        fprintf(output_file, "%zu;%d;%d;%d;%d;%s;0;", len, tag_bits, precompute, parallel, verbose, variant ? "Compact" : "Naive");
+        fprintf(output_file, "%zu;%d;%d;%d;%d;%s;0;", len, tag_bits, precompute, parallel, verbose, variant == 0 ? "Naive" : (variant == 1 ? "Compact" : (variant == 2 ? "Custom1" : "Custom2")));
         print_tag(output_file, tag, tag_bits, 0);
         fprintf(output_file, ";%.2f;%.2f\n", time_us, cycles_per_byte);
         result = cycles_per_byte;
@@ -107,8 +107,8 @@ void run_test_suite(FILE *output_file, const char *output_format, int encoding)
     int num_tags = 4;
     uint8_t tag[BLOCK_SIZE];
 
-    int start_encoding = (encoding == 2) ? 0 : encoding;
-    int end_encoding = (encoding == 2) ? 2 : encoding + 1;
+    int start_encoding = (encoding == 4) ? 0 : encoding;
+    int end_encoding = (encoding == 4) ? 4 : encoding + 1;
 
     for (int parallel = 0; parallel < 2; parallel++)
     {
@@ -252,7 +252,7 @@ int main(int argc, char *argv[])
     int parallel = 0;
     int run_test = 0;
     int run_single = 0;
-    int encoding = 2;
+    int encoding = 4;
     char *output_format = "csv"; // Default: CSV
 
     for (int i = 1; i < argc; i++)
@@ -293,9 +293,9 @@ int main(int argc, char *argv[])
         else if (strcmp(argv[i], "--encoding") == 0 && i + 1 < argc)
         {
             encoding = atoi(argv[++i]);
-            if (encoding != 0 && encoding != 1 && encoding != 2)
+            if (encoding < 0 || encoding > 4)
             {
-                fprintf(stderr, "Invalid encoding. Use 0 (Naive), 1 (Compact), or 2 (Both).\n");
+                fprintf(stderr, "Invalid encoding. Use 0 (Naive), 1 (Compact), 2 (Both), 3 (Custom1), or 4 (Custom2).\n");
                 return 1;
             }
         }

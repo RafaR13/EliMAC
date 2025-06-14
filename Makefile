@@ -29,7 +29,7 @@ TARGET = elimac
 DEPS = $(HEADER_DIR)/elimac.h $(HEADER_DIR)/elihash.h $(HEADER_DIR)/utils.h $(HEADER_DIR)/main.h
 
 # Default encoding (0: naive, 1: compact, 2: both)
-ENCODING ?= 2
+ENCODING ?= 4
 
 # Default output format (txt or csv)
 OUTPUT_FORMAT ?= csv

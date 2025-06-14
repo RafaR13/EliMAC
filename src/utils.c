@@ -100,20 +100,32 @@ int encode_counter(uint32_t counter, uint8_t *output, int variant)
 
     uint8_t counter_bytes[4] = {
         (counter >> 24) & 0xFF, (counter >> 16) & 0xFF, (counter >> 8) & 0xFF, counter & 0xFF};
-    if (variant)
+
+    switch (variant)
     {
-        // Compact: 32-bit counter in last 4 bytes, 96 zero bits
-        memset(output, 0, BLOCK_SIZE);
-        memcpy(output + 12, counter_bytes, 4);
-    }
-    else
-    {
-        // Naive: Repeat 32-bit counter four times
+    case 0: // Naive: Repeat 32-bit counter four times
         for (int i = 0; i < 4; i++)
         {
             memcpy(output + i * 4, counter_bytes, 4);
         }
+        break;
+    case 1: // Compact: 32-bit counter in last 4 bytes, 96 zero bits
+        memset(output, 0, 12);
+        memcpy(output + 12, counter_bytes, 4);
+        break;
+    case 2:
+        memset(output, 0, 12);
+        memcpy(output + 12, &counter_bytes, 4);
+        break;
+    case 3:
+        memset(output, 0, 12);
+        *((uint32_t *)(output + 12)) = counter; // Assumes little-endian + aligned
+        break;
+    default:
+        fprintf(stderr, "Invalid variant %d in encode_counter\n", variant);
+        return -1;
     }
+
     return 1;
 }
 
