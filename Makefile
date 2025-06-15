@@ -56,7 +56,7 @@ run_csv: $(OUTDIR) $(TARGET)
 
 clean:
 	rm -f $(TARGET) $(SRC_DIR)/*.o
-
+	rm -rf $(OUTDIR) $(GRAPH_DIR) $(TABLE_DIR)
 .PHONY: all run run_txt run_csv clean
 
 # rm -rf $(OUTDIR) $(GRAPH_DIR) $(TABLE_DIR)
