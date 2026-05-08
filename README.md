@@ -1,6 +1,12 @@
 # EliMAC
 
-Rafael Ribeiro ist1102975
+## Description
+
+This repository contains a C implementation of **EliMAC**, a lightweight Message Authentication Code designed to improve the efficiency of LightMAC through parallel universal hashing. The project explores different implementation strategies, including precomputation, optional OpenMP parallelism, flexible tag sizes, and multiple counter encoding variants.
+
+The implementation supports benchmarking and performance analysis across different message sizes and configurations, with results exported in CSV format and analyzed using Python scripts. The main goal of this project is to provide a practical implementation of EliMAC and evaluate its performance in terms of cycles per byte and throughput.
+
+This work was developed as part of a Cryptography and Security Protocols course project on lightweight Message Authentication Codes.
 
 ## Compilation
 ### Default (no OpenMP)
